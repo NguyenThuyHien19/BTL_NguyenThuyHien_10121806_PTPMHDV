@@ -116,23 +116,22 @@ GO
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
-/****** Object:  Table [dbo].[User]    Script Date: 9/23/2023 11:40:53 AM ******/
+/****** Object:  Table [dbo].[QuanTri]    Script Date: 9/23/2023 11:40:53 AM ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE TABLE [dbo].[User](
-	[ID] [nvarchar](50) NOT NULL,
+CREATE TABLE [dbo].[QuanTri](
+	[ID] [int] IDENTITY(1,1) NOT NULL,
 	[hoten] [nvarchar](150) NULL,
-	[ngaysinh] [date] NULL,
 	[diachi] [nvarchar](250) NULL,
 	[gioitinh] [nvarchar](30) NULL,
 	[email] [nvarchar](100) NULL,
 	[taikhoan] [nvarchar](100) NULL,
 	[matkhau] [nvarchar](100) NULL,
- CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_QuanTri] PRIMARY KEY CLUSTERED 
 (
 	[ID] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
@@ -208,4 +207,83 @@ CREATE TABLE [dbo].[ChitietHoaDon](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_quantri_create]    Script Date: 9/28/2023 9:28:46 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_quantri_create](
+@hoten nvarchar(150),
+@diachi nvarchar(250),
+@gioitinh nvarchar(30),
+@email nvarchar(100),
+@taikhoan nvarchar(100),
+@matkhau nvarchar(100)
+)
+AS
+    BEGIN
+       insert into QuanTri(hoten, diachi, gioitinh, email, taikhoan, matkhau)
+	   values(@hoten, @diachi, @gioitinh, @email, @taikhoan, @matkhau);
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_quantri_delete]    Script Date: 9/28/2023 9:39:18 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_quantri_delete]
+(@ID int
+)
+AS
+    BEGIN
+		delete from QuanTri  where ID = @ID;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_quantri_update]    Script Date: 9/28/2023 9:46:29 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[sp_quantri_update]
+(@id int,
+@hoten nvarchar(150),
+@diachi nvarchar(250),
+@gioitinh nvarchar(30),
+@email nvarchar(100),
+@taikhoan nvarchar(100),
+@matkhau nvarchar(100)
+)
+AS
+    BEGIN
+   update QuanTri set 
+				hoten= @hoten,
+				diachi= @diachi,
+				gioitinh= @gioitinh,
+				email= @email,
+				taikhoan = @taikhoan,
+				matkhau = @matkhau           
+				where ID = @ID;
+        SELECT '';
+    END;
+GO
+
 
