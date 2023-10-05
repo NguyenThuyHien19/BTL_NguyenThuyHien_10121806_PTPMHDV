@@ -286,4 +286,85 @@ AS
     END;
 GO
 
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_quantri_get_by_id]    Script Date: 10/5/2023 9:14:18 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+Create procedure [dbo].[sp_quantri_get_by_id] @id int
+AS
+    BEGIN
+      SELECT  *
+      FROM QuanTri
+      where ID = @id;
+    END;
+GO
+
+exec [dbo].[sp_quantri_get_by_id] 1
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_quantri_search]    Script Date: 10/5/2023 10:14:31 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_quantri_search] (@page_index  INT, 
+                                       @page_size   INT,
+									   @hoten Nvarchar(50),
+									   @diachi Nvarchar(250)
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY hoten ASC)) AS RowNumber, 
+                              k.ID,
+							  k.hoten,
+							  k.diachi
+                        INTO #Results1
+                        FROM QuanTri AS k
+					    WHERE  (@hoten = '' Or k.hoten like N'%'+@hoten+'%') and						
+						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY hoten ASC)) AS RowNumber, 
+                              k.Id,
+							  k.hoten,
+							  k.diachi
+                        INTO #Results2
+                        FROM QuanTri AS k
+					    WHERE  (@hoten = '' Or k.hoten like N'%'+@hoten+'%') and						
+						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2;                        
+                        DROP TABLE #Results1; 
+        END;
+    END;
+GO
 
