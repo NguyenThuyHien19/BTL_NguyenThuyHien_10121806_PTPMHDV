@@ -141,7 +141,28 @@ GO
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
-/****** Object:  Table [dbo].[SanPham]    Script Date: 9/23/2023 11:41:16 AM ******/
+/****** Object:  Table [dbo].[LoaiSanPham]    Script Date: 10/12/2023 9:31:14 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[LoaiSanPham](
+	[IDLoaiSP] [int] IDENTITY(1,1) NOT NULL,
+	[TenLoaiSP] [nvarchar](250) NULL,
+	[NoiDung] [nvarchar](350) NULL,
+ CONSTRAINT [PK_LoaiSanPham] PRIMARY KEY CLUSTERED 
+(
+	[IDLoaiSP] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  Table [dbo].[SanPham]    Script Date: 10/12/2023 9:30:41 AM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -149,16 +170,55 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE TABLE [dbo].[SanPham](
-	[IDSP] [nvarchar](50) NOT NULL,
+	[IDSP] [int] IDENTITY(1,1) NOT NULL,
+	[IDLoaiSP] int NULL,
 	[TenSP] [nvarchar](250) NULL,
 	[GiaSP] [decimal](18, 0) NULL,
-	[SoLuong] [int] NULL,
-	[TrangThai] [nvarchar](100) NULL,
- CONSTRAINT [PK_SanPham] PRIMARY KEY CLUSTERED 
+	[TinhTrang] [nvarchar](100) NULL,
+	[AnhSP] [nvarchar](350) NULL,
+ CONSTRAINT [PK_Table_1] PRIMARY KEY CLUSTERED 
 (
 	[IDSP] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[SanPham]  WITH CHECK ADD  CONSTRAINT [FK_SanPham_LoaiSanPham] FOREIGN KEY([IDLoaiSP])
+REFERENCES [dbo].[LoaiSanPham] ([IDLoaiSP])
+GO
+
+ALTER TABLE [dbo].[SanPham] CHECK CONSTRAINT [FK_SanPham_LoaiSanPham]
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  Table [dbo].[ChiTietSanPham]    Script Date: 10/12/2023 9:31:50 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[ChiTietSanPham](
+	[IDCTSP] [int] IDENTITY(1,1) NOT NULL,
+	[IDSP] [int] NOT NULL,
+	[SoLuong] [int] NULL,
+	[TongGia] [decimal](18, 0) NULL,
+	[AnhCTSP] [nvarchar](350) NULL,
+	[MoTa] [nvarchar](350) NULL,
+ CONSTRAINT [PK_ChiTietSanPham] PRIMARY KEY CLUSTERED 
+(
+	[IDCTSP] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[ChiTietSanPham]  WITH CHECK ADD  CONSTRAINT [FK_ChiTietSanPham_SanPham] FOREIGN KEY([IDSP])
+REFERENCES [dbo].[SanPham] ([IDSP])
+GO
+
+ALTER TABLE [dbo].[ChiTietSanPham] CHECK CONSTRAINT [FK_ChiTietSanPham_SanPham]
 GO
 
 USE [BTL_PTPMHDV_NguyenThuyHien]
@@ -172,7 +232,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE TABLE [dbo].[HoaDon](
-	[IDHoaDon] [nvarchar](50) NOT NULL,
+	[IDHoaDon] [int] IDENTITY(1,1) NOT NULL,
 	[NgayTao] [datetime] NULL,
 	[TongGia] [decimal](18, 0) NULL,
 	[TenKH] [nvarchar](100) NULL,
@@ -196,9 +256,9 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE TABLE [dbo].[ChitietHoaDon](
-	[IDChiTietHoaDon] [nvarchar](50) NOT NULL,
-	[IDHoaDon] [nvarchar](50) NULL,
-	[IDSP] [nvarchar](50) NULL,
+	[IDChiTietHoaDon] [int] IDENTITY(1,1) NOT NULL,
+	[IDHoaDon] [int] NULL,
+	[IDSP] [int] NULL,
 	[SoLuong] [int] NULL,
 	[TongGia] [decimal](18, 0) NULL,
  CONSTRAINT [PK_ChitietHoaDon] PRIMARY KEY CLUSTERED 
@@ -358,6 +418,151 @@ AS
                         FROM QuanTri AS k
 					    WHERE  (@hoten = '' Or k.hoten like N'%'+@hoten+'%') and						
 						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2;                        
+                        DROP TABLE #Results1; 
+        END;
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_loaisp_get_by_id]    Script Date: 10/12/2023 10:09:47 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+Create procedure [dbo].[sp_loaisp_get_by_id] @id int
+AS
+    BEGIN
+      SELECT  *
+      FROM LoaiSanPham
+      where IDLoaiSP = @id;
+    END;
+GO
+exec [dbo].[sp_loaisp_get_by_id] 1
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_loaisp_create]    Script Date: 10/12/2023 10:14:55 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_loaisp_create](
+@tenloaisp nvarchar(250),
+@noidung nvarchar(350)
+)
+AS
+    BEGIN
+       insert into LoaiSanPham(TenLoaiSP, NoiDung)
+	   values(@tenloaisp, @noidung);
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_loaisp_delete]    Script Date: 10/12/2023 10:22:52 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_loaisp_delete]
+(@ID int
+)
+AS
+    BEGIN
+		delete from LoaiSanPham  where IDLoaiSP = @ID;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_loaisp_update]    Script Date: 10/12/2023 10:23:12 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[sp_loaisp_update]
+(@id int,
+@tenloaisp nvarchar(250),
+@noidung nvarchar(350)
+)
+AS
+    BEGIN
+   update LoaiSanPham set 
+				TenLoaiSP= @tenloaisp,
+				NoiDung= @noidung  
+				where IDLoaiSP = @id;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_loaisp_search]    Script Date: 10/12/2023 10:23:28 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_loaisp_search] (@page_index  INT, 
+                                       @page_size   INT,
+									   @tenloaisp Nvarchar(250)								  
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY tenloaisp ASC)) AS RowNumber, 
+                              k.IDLoaiSP,
+							  k.TenLoaiSP,
+							  k.NoiDung
+                        INTO #Results1
+                        FROM LoaiSanPham AS k
+					    WHERE  (@tenloaisp = '' Or k.TenLoaiSP like N'%'+@tenloaisp+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY tenloaisp ASC)) AS RowNumber, 
+                              k.IDLoaiSP,
+							  k.TenLoaiSP,
+							  k.NoiDung
+                        INTO #Results2
+                        FROM LoaiSanPham AS k
+					    WHERE   (@tenloaisp = '' Or k.TenLoaiSP like N'%'+@tenloaisp+'%');                                  
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results2;
                         SELECT *, 
