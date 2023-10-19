@@ -461,12 +461,14 @@ GO
 
 create PROCEDURE [dbo].[sp_loaisp_create](
 @tenloaisp nvarchar(250),
-@noidung nvarchar(350)
+@noidung nvarchar(350),
+@list_json_sanpham NVARCHAR(MAX),
+@list_json_chitietsanpham NVARCHAR(MAX)
 )
 AS
     BEGIN
-       insert into LoaiSanPham(TenLoaiSP, NoiDung)
-	   values(@tenloaisp, @noidung);
+        insert into LoaiSanPham(TenLoaiSP, NoiDung)
+		values(@tenloaisp, @noidung);
     END;
 GO
 
@@ -498,12 +500,13 @@ SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
-GO
-
-CREATE PROCEDURE [dbo].[sp_loaisp_update]
+GO 
+alter PROCEDURE [dbo].[sp_loaisp_update]
 (@id int,
 @tenloaisp nvarchar(250),
-@noidung nvarchar(350)
+@noidung nvarchar(350),
+@list_json_sanpham NVARCHAR(MAX),
+@list_json_chitietsanpham NVARCHAR(MAX)
 )
 AS
     BEGIN
@@ -572,4 +575,112 @@ AS
         END;
     END;
 GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_sanpham_create]    Script Date: 10/19/2023 8:41:49 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_sanpham_create]
+(@IDLoaiSP int,
+@TenSP NVARCHAR(250), 
+@GiaSP decimal(18,0), 
+@TinhTrang nvarchar(100),
+@AnhSP nvarchar(350),
+@list_json_chitietsanpham NVARCHAR(MAX)
+)
+AS
+    BEGIN
+		DECLARE @IDSP INT;
+        INSERT INTO SanPham (IDLoaiSP, TenSP, GiaSP, TinhTrang, AnhSP)
+			VALUES
+                (@IDLoaiSP,
+				 @TenSP, 
+                 @GiaSP, 
+                 @TinhTrang,
+				 @AnhSP
+                );
+
+				SET @IDSP = (SELECT SCOPE_IDENTITY());
+                IF(@list_json_chitietsanpham IS NOT NULL)
+                    BEGIN
+                        INSERT INTO ChiTietSanPham
+						 (IDSP, 
+						  SoLuong,
+                          AnhCTSP, 
+                          MoTa               
+                        )
+                    SELECT @IDSP,
+						   JSON_VALUE(p.value, '$.soLuong'), 
+                           JSON_VALUE(p.value, '$.anhCTSP'), 
+                           JSON_VALUE(p.value, '$.moTa')    
+                    FROM OPENJSON(@list_json_chitietsanpham) AS p;
+                END;
+        SELECT '';
+    END;
+GO
+
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_sanpham_update]    Script Date: 10/19/2023 11:22:55 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+Create PROCEDURE [dbo].[sp_sanpham_update]
+(@IDSP int, 
+@IDLoaiSP int,
+@TenSP NVARCHAR(250), 
+@GiaSP decimal(18,0), 
+@TinhTrang nvarchar(100),
+@AnhSP nvarchar(350),
+@list_json_chitietsanpham NVARCHAR(MAX)
+)
+AS
+    BEGIN
+		UPDATE SanPham
+		SET
+			IDLoaiSP = @IDLoaiSP,
+			TenSP  = @TenSP,
+			GiaSP = @GiaSP,
+			TinhTrang = @TinhTrang,
+			AnhSP = @AnhSP
+		WHERE IDSP = @IDSP;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_hoadon_get_by_id]    Script Date: 10/16/2023 4:46:16 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_hoadon_get_by_id](@IDHoaDon int)
+AS
+    BEGIN
+        SELECT h.*, 
+        (
+            SELECT c.*
+            FROM ChiTietHoaDon AS c
+            WHERE h.IDHoaDon = c.IDHoaDon FOR JSON PATH
+        ) AS list_json_chitiethoadon
+        FROM HoaDon AS h
+        WHERE  h.IDHoaDon = @IDHoaDon;
+    END;
+GO
+
 
