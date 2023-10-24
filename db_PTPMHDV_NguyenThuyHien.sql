@@ -1,4 +1,4 @@
-USE [master]
+﻿USE [master]
 GO
 
 /****** Object:  Database [BTL_PTPMHDV_NguyenThuyHien]    Script Date: 9/23/2023 10:41:10 AM ******/
@@ -625,7 +625,6 @@ AS
     END;
 GO
 
-
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
@@ -636,28 +635,167 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-Create PROCEDURE [dbo].[sp_sanpham_update]
-(@IDSP int, 
-@IDLoaiSP int,
-@TenSP NVARCHAR(250), 
-@GiaSP decimal(18,0), 
-@TinhTrang nvarchar(100),
-@AnhSP nvarchar(350),
-@list_json_chitietsanpham NVARCHAR(MAX)
+alter PROCEDURE [dbo].[sp_sanpham_update]
+(@IDSP Int,
+ @IDLoaiSP int,
+ @TenSP NVARCHAR(250), 
+ @GiaSP decimal(18,0), 
+ @TinhTrang nvarchar(100),
+ @AnhSP nvarchar(350),
+ @list_json_chitietsanpham NVARCHAR(MAX)
 )
 AS
     BEGIN
 		UPDATE SanPham
 		SET
 			IDLoaiSP = @IDLoaiSP,
-			TenSP  = @TenSP,
+			TenSP  =  @TenSP,
 			GiaSP = @GiaSP,
 			TinhTrang = @TinhTrang,
 			AnhSP = @AnhSP
-		WHERE IDSP = @IDSP;
+		WHERE IDSP = @IDSP AND @IDLoaiSP = (SELECT IDLoaiSP FROM LoaiSanPham WHERE @IDLoaiSP = IDLoaiSP)
+		IF(@list_json_chitietsanpham IS NOT NULL) 
+		BEGIN
+			 -- Insert data to temp table 
+		   SELECT
+			  JSON_VALUE(p.value, '$.idctsp') as idctsp,
+			  JSON_VALUE(p.value, '$.soLuong') as soLuong, 
+		      JSON_VALUE(p.value, '$.anhCTSP') as anhCTSP,
+			  JSON_VALUE(p.value, '$.moTa')as moTa,
+			  JSON_VALUE(p.value, '$.status') AS status 
+			  INTO #Results 
+		   FROM OPENJSON(@list_json_chitietsanpham) AS p;
+		 
+		 -- Insert data to table with STATUS = 1;
+			INSERT INTO ChiTietSanPham(
+						  IDSP,
+						  MoTa,
+                          SoLuong, 
+						  AnhCTSP
+                        )
+			   SELECT
+				  @IDSP,
+				  #Results.moTa,
+				  #Results.soLuong,
+				  #Results.anhCTSP
+			   FROM  #Results 
+			   WHERE #Results.status = '1'
+			-- Delete data to table with STATUS = 3
+			DELETE C
+			FROM ChiTietSanPham C
+			INNER JOIN #Results R
+				ON C.IDCTSP = R.idctsp
+			WHERE R.status = '3'; 
+			-- Update data to table with STATUS = 2
+			  UPDATE ChiTietSanPham 
+			  SET
+				  MoTa = #Results.moTa,
+				  Soluong= #Results.soLuong,
+				  AnhCTSP = #Results.anhCTSP
+			  FROM #Results 
+			  WHERE  ChiTietSanPham.IDCTSP = #Results.idctsp AND #Results.status = '2';
+			
+			DROP TABLE #Results;
+		END;
         SELECT '';
     END;
 GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_sanpham_delete]    Script Date: 10/20/2023 4:05:33 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_sanpham_delete]
+(@IDSP int
+)
+AS
+    BEGIN
+		delete from ChiTietSanPham where IDSP = @IDSP
+		delete from SanPham  where IDSP = @IDSP;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_sanpham_search]    Script Date: 10/20/2023 4:40:56 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+alter PROCEDURE [dbo].[sp_sanpham_search] (@page_index  INT, 
+                                       @page_size   INT,
+									   @tenSP Nvarchar(250)								  
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY TenSP ASC)) AS RowNumber, 
+                              k.IDSP,
+							  k.IDLoaiSP,
+							  k.TenSP,
+							  k.GiaSP,
+							  k.TinhTrang,
+							  k.AnhSP,
+							  c.IDCTSP,
+							  c.SoLuong,
+							  c.MoTa,
+							  c.AnhCTSP
+                        INTO #Results1
+                        FROM SanPham AS k
+						inner join ChiTietSanPham c on k.IDSP = c.IDSP
+					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY TenSP ASC)) AS RowNumber, 
+                              k.IDSP,
+							  k.IDLoaiSP,
+							  k.TenSP,
+							  k.GiaSP,
+							  k.TinhTrang,
+							  k.AnhSP,
+							  c.IDCTSP,
+							  c.SoLuong,
+							  c.MoTa,
+							  c.AnhCTSP
+                        INTO #Results2
+                        FROM SanPham AS k
+						full outer join ChiTietSanPham c on k.IDSP = c.IDSP
+					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%');                 
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2;                        
+                        DROP TABLE #Results1; 
+        END;
+    END;
+GO
+exec [dbo].[sp_sanpham_search] '1', '100', đàn
 
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
@@ -683,4 +821,6 @@ AS
     END;
 GO
 
-
+select k.*, c.*
+From SanPham k full outer join ChiTietSanPham c on k.IDSP = c.IDSP
+where k.TenSP like N'%g%'
