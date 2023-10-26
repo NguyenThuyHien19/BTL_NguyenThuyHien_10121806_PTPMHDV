@@ -131,7 +131,32 @@ CREATE TABLE [dbo].[QuanTri](
 	[email] [nvarchar](100) NULL,
 	[taikhoan] [nvarchar](100) NULL,
 	[matkhau] [nvarchar](100) NULL,
+	[vaitro] [nvarchar](100) NULL,
  CONSTRAINT [PK_QuanTri] PRIMARY KEY CLUSTERED 
+(
+	[ID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  Table [dbo].[KhachHang]    Script Date: 10/25/2023 10:11:45 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create TABLE [dbo].[KhachHang](
+	[ID] [int] IDENTITY(1,1) NOT NULL,
+	[tenkh] [nvarchar](150) NULL,
+	[diachi] [nvarchar](250) NULL,
+	[email] [nvarchar](100) NULL,
+	[taikhoan] [nvarchar](100) NULL,
+	[matkhau] [nvarchar](100) NULL,
+ CONSTRAINT [PK_KhachHang] PRIMARY KEY CLUSTERED 
 (
 	[ID] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
@@ -482,7 +507,7 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-create PROCEDURE [dbo].[sp_loaisp_delete]
+alter PROCEDURE [dbo].[sp_loaisp_delete]
 (@ID int
 )
 AS
@@ -573,6 +598,30 @@ AS
                         FROM #Results2;                        
                         DROP TABLE #Results1; 
         END;
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_sanpham_get_by_id]    Script Date: 10/25/2023 9:34:13 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+alter PROCEDURE [dbo].[sp_sanpham_get_by_id](@IDSP int)
+AS
+    BEGIN
+        SELECT h.*, 
+        (
+            SELECT c.*
+            FROM ChiTietSanPham AS c
+            WHERE h.IDSP = c.IDSP FOR JSON PATH
+        ) AS list_json_chitietsanpham
+        FROM SanPham AS h
+        WHERE  h.IDSP = @IDSP;
     END;
 GO
 
@@ -711,11 +760,12 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-create PROCEDURE [dbo].[sp_sanpham_delete]
+alter PROCEDURE [dbo].[sp_sanpham_delete]
 (@IDSP int
 )
 AS
     BEGIN
+		delete from ChitietHoaDon where IDSP = @IDSP
 		delete from ChiTietSanPham where IDSP = @IDSP
 		delete from SanPham  where IDSP = @IDSP;
         SELECT '';
@@ -734,10 +784,23 @@ GO
 
 alter PROCEDURE [dbo].[sp_sanpham_search] (@page_index  INT, 
                                        @page_size   INT,
-									   @tenSP Nvarchar(250)								  
+									   @tenSP Nvarchar(250),
+									   @IDSP int
 									   )
 AS
     BEGIN
+		DECLARE @list_json_chitietsanpham NVARCHAR(MAX)
+		SELECT @list_json_chitietsanpham = (
+								SELECT
+									c.IDCTSP,
+									c.IDSP,
+									c.MoTa,
+									c.Soluong,
+									c.AnhCTSP
+								FROM ChiTietSanPham AS c
+								WHERE c.IDSP = @IDSP
+								FOR JSON AUTO
+							)
         DECLARE @RecordCount BIGINT;
         IF(@page_size <> 0)
             BEGIN
@@ -753,11 +816,13 @@ AS
 							  c.IDCTSP,
 							  c.SoLuong,
 							  c.MoTa,
-							  c.AnhCTSP
+							  c.AnhCTSP,
+							  @list_json_chitietsanpham as list_json_chitietsanpham
                         INTO #Results1
                         FROM SanPham AS k
-						inner join ChiTietSanPham c on k.IDSP = c.IDSP
-					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%');                   
+						full outer join ChiTietSanPham c on c.IDSP = k.IDSP
+					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%')
+						and k.IDSP = @IDSP;                   
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results1;
                         SELECT *, 
@@ -781,11 +846,13 @@ AS
 							  c.IDCTSP,
 							  c.SoLuong,
 							  c.MoTa,
-							  c.AnhCTSP
+							  c.AnhCTSP,
+							  @list_json_chitietsanpham as list_json_chitietsanpham
                         INTO #Results2
                         FROM SanPham AS k
-						full outer join ChiTietSanPham c on k.IDSP = c.IDSP
-					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%');                 
+						full outer join ChiTietSanPham c on c.IDSP = k.IDSP
+					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%')
+												and k.IDSP = @IDSP;                               
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results2;
                         SELECT *, 
@@ -795,7 +862,6 @@ AS
         END;
     END;
 GO
-exec [dbo].[sp_sanpham_search] '1', '100', đàn
 
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
@@ -821,6 +887,400 @@ AS
     END;
 GO
 
-select k.*, c.*
-From SanPham k full outer join ChiTietSanPham c on k.IDSP = c.IDSP
-where k.TenSP like N'%g%'
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_hoadon_create]    Script Date: 10/25/2023 6:13:10 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+alter PROCEDURE [dbo].[sp_hoadon_create]
+(@NgayTao datetime,
+@TongGia decimal(18,0), 
+@TenKH nvarchar(100), 
+@DiaChi nvarchar(250),
+@Sdt nvarchar(50),
+@list_json_chitiethoadon NVARCHAR(MAX)
+)
+AS
+    BEGIN
+		DECLARE @IDHoaDon INT;
+        INSERT INTO HoaDon(NgayTao, TongGia, TenKH, DiaChi, Sdt)
+			VALUES
+                (@NgayTao,
+				 @TongGia, 
+                 @TenKH, 
+                 @DiaChi,
+				 @Sdt
+                );
+
+				SET @IDHoaDon = (SELECT SCOPE_IDENTITY());
+                IF(@list_json_chitiethoadon IS NOT NULL)
+                    BEGIN
+                        INSERT INTO ChitietHoaDon
+						 (IDHoaDon, 
+						  IDSP,
+                          SoLuong, 
+                          TongGia               
+                        )
+
+                    SELECT @IDHoaDon,
+						   JSON_VALUE(p.value, '$.idSanPham'), 
+                           JSON_VALUE(p.value, '$.soLuong'), 
+                           JSON_VALUE(p.value, '$.tongGia')    
+                    FROM OPENJSON(@list_json_chitiethoadon) AS p;
+                END;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_hoadon_update]    Script Date: 10/25/2023 6:26:39 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+alter PROCEDURE [dbo].[sp_hoadon_update]
+(@IDHoaDon Int,
+@NgayTao datetime,
+@TongGia decimal(18,0), 
+@TenKH nvarchar(100), 
+@DiaChi nvarchar(250),
+@Sdt nvarchar(50),
+@list_json_chitiethoadon NVARCHAR(MAX)
+)
+AS
+    BEGIN
+		UPDATE HoaDon
+		SET
+			NgayTao = @NgayTao,
+			TongGia = @TongGia,
+			TenKH  =  @TenKH,
+			DiaChi = @DiaChi,
+			Sdt = @Sdt
+		WHERE IDHoaDon = @IDHoaDon 
+		IF(@list_json_chitiethoadon IS NOT NULL) 
+		BEGIN
+			 -- Insert data to temp table 
+		   SELECT
+			  JSON_VALUE(p.value, '$.idChiTietHoaDon') as idcthd,
+			  JSON_VALUE(p.value, '$.idSanPham') as idSP,
+			  JSON_VALUE(p.value, '$.soLuong') as soLuong, 
+			  JSON_VALUE(p.value, '$.tongGia')as tongGia,
+			  JSON_VALUE(p.value, '$.status') AS status 
+			  INTO #Results 
+		   FROM OPENJSON(@list_json_chitiethoadon) AS p;
+		 
+		 -- Insert data to table with STATUS = 1;
+			INSERT INTO ChitietHoaDon(
+						  IDHoaDon,
+						  IDSP,
+                          SoLuong, 
+						  TongGia
+                        )
+			   SELECT
+				  @IDHoaDon,
+				  #Results.idSP,
+				  #Results.soLuong,
+				  #Results.tongGia
+			   FROM  #Results 
+			   WHERE #Results.status = '1'
+
+			-- Update data to table with STATUS = 2
+			UPDATE ChitietHoaDon 
+			SET
+				IDSP = #Results.idSP,
+				Soluong= #Results.soLuong,
+				TongGia = #Results.tongGia
+			FROM #Results 
+			WHERE  ChitietHoaDon.IDChiTietHoaDon = #Results.idcthd AND #Results.status = '2';
+
+			-- Delete data to table with STATUS = 3
+			DELETE C
+			FROM ChitietHoaDon C
+			INNER JOIN #Results R
+				ON C.IDChiTietHoaDon = R.idcthd
+			WHERE R.status = '3';
+			DROP TABLE #Results;
+		END;
+        SELECT '';
+    END;
+GO
+
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_hoadon_delete]    Script Date: 10/25/2023 6:26:51 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_hoadon_delete]
+(@IDHoaDon int
+)
+AS
+    BEGIN
+		delete from ChitietHoaDon where IDHoaDon = @IDHoaDon
+		delete from HoaDon  where IDHoaDon = @IDHoaDon;
+        SELECT '';
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_thong_ke_khach]    Script Date: 10/26/2023 12:15:06 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_thong_ke_khach] (@page_index  INT, 
+                                       @page_size   INT,
+									   @ten_khach Nvarchar(50),
+									   @fr_NgayTao datetime, 
+									   @to_NgayTao datetime
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY h.NgayTao ASC)) AS RowNumber, 
+                              s.IDSP,
+							  s.TenSP,
+							  c.SoLuong,
+							  c.TongGia,
+							  h.NgayTao,
+							  h.TenKH,
+							  h.Diachi
+                        INTO #Results1
+                        FROM HoaDon h
+						inner join ChiTietHoaDon c on c.IDHoaDon = h.IDHoaDon
+						inner join SanPham s on s.IDSP = c.IDSP
+					    WHERE  (@ten_khach = '' Or h.TenKH like N'%'+@ten_khach+'%') and						
+						((@fr_NgayTao IS NULL
+                        AND @to_NgayTao IS NULL)
+                        OR (@fr_NgayTao IS NOT NULL
+                            AND @to_NgayTao IS NULL
+                            AND h.NgayTao >= @fr_NgayTao)
+                        OR (@fr_NgayTao IS NULL
+                            AND @to_NgayTao IS NOT NULL
+                            AND h.NgayTao <= @to_NgayTao)
+                        OR (h.NgayTao BETWEEN @fr_NgayTao AND @to_NgayTao))              
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY h.NgayTao ASC)) AS RowNumber, 
+                              s.IDSP,
+							  s.TenSP,
+							  c.SoLuong,
+							  c.TongGia,
+							  h.NgayTao,
+							  h.TenKH,
+							  h.Diachi
+                        INTO #Results2
+                        FROM HoaDon  h
+						inner join ChiTietHoaDon c on c.IDHoaDon = h.IDHoaDon
+						inner join SanPham s on s.IDSP = c.IDSP
+					    WHERE  (@ten_khach = '' Or h.TenKH like N'%'+@ten_khach+'%') and						
+						((@fr_NgayTao IS NULL
+                        AND @to_NgayTao IS NULL)
+                        OR (@fr_NgayTao IS NOT NULL
+                            AND @to_NgayTao IS NULL
+                            AND h.NgayTao >= @fr_NgayTao)
+                        OR (@fr_NgayTao IS NULL
+						AND @to_NgayTao IS NOT NULL
+                            AND h.NgayTao <= @to_NgayTao)
+                        OR (h.NgayTao BETWEEN @fr_NgayTao AND @to_NgayTao))              
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2                        
+                        DROP TABLE #Results2; 
+        END;
+    END;
+GO
+
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_get_by_id]    Script Date: 10/25/2023 10:30:56 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+Create procedure [dbo].[sp_khach_get_by_id] @id int
+AS
+    BEGIN
+      SELECT  *
+      FROM KhachHang
+      where id= @id;
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_create]    Script Date: 10/25/2023 10:31:12 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_khach_create](
+@tenkh nvarchar(150),
+@diachi nvarchar(250),
+@email nvarchar(100),
+@taikhoan nvarchar(100),
+@matkhau nvarchar(100)
+)
+AS
+    BEGIN
+       insert into KhachHang(tenkh, diachi, email, taikhoan, matkhau)
+	   values(@tenkh, @diachi, @email, @taikhoan, @matkhau);
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_update]    Script Date: 10/25/2023 10:31:27 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_khach_update](
+@ID int,
+@tenkh nvarchar(150),
+@diachi nvarchar(250),
+@email nvarchar(100),
+@taikhoan nvarchar(100),
+@matkhau nvarchar(100)
+)
+AS
+    BEGIN
+       update KhachHang
+	   set tenkh = @tenkh, diachi = @diachi, email = @email, taikhoan = @taikhoan, matkhau = @matkhau
+	   where ID = @ID
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_delete]    Script Date: 10/25/2023 10:31:40 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+create PROCEDURE [dbo].[sp_khach_delete](
+@id int
+)
+AS
+    BEGIN
+       delete from KhachHang
+	   where ID = @id
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_search]    Script Date: 10/25/2023 10:31:53 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_khach_search] (@page_index  INT, 
+                                       @page_size   INT,
+									   @tenkh Nvarchar(150),
+									   @diachi Nvarchar(250)
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY TenKH ASC)) AS RowNumber, 
+                              k.ID,
+							  k.tenkh,
+							  k.diachi,
+							  k.email,
+							  k.taikhoan,
+							  k.matkhau
+                        INTO #Results1
+                        FROM KhachHang AS k
+					    WHERE  (@tenkh = '' Or k.tenkh like N'%'+@tenkh+'%') and						
+						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY TenKH ASC)) AS RowNumber, 
+							  k.ID,
+							  k.tenkh,
+							  k.diachi,
+							  k.email,
+							  k.taikhoan,
+							  k.matkhau
+                        INTO #Results2
+                        FROM KhachHang AS k
+					    WHERE  (@tenkh = '' Or k.tenkh like N'%'+@tenkh+'%') and						
+						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2;                        
+                        DROP TABLE #Results1; 
+        END;
+    END;
+GO
+
