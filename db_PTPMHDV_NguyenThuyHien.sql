@@ -1284,3 +1284,22 @@ AS
     END;
 GO
 
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_login]    Script Date: 10/26/2023 8:50:02 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_login](@taikhoan nvarchar(100), @matkhau nvarchar(100))
+AS
+    BEGIN
+      SELECT  *
+      FROM KhachHang
+      where taikhoan = @taikhoan and matkhau = @matkhau;
+    END;
+GO
+
