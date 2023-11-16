@@ -303,18 +303,19 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-create PROCEDURE [dbo].[sp_quantri_create](
+alter PROCEDURE [dbo].[sp_quantri_create](
 @hoten nvarchar(150),
 @diachi nvarchar(250),
 @gioitinh nvarchar(30),
 @email nvarchar(100),
 @taikhoan nvarchar(100),
-@matkhau nvarchar(100)
+@matkhau nvarchar(100),
+@vaitro nvarchar(100)
 )
 AS
     BEGIN
-       insert into QuanTri(hoten, diachi, gioitinh, email, taikhoan, matkhau)
-	   values(@hoten, @diachi, @gioitinh, @email, @taikhoan, @matkhau);
+       insert into QuanTri(hoten, diachi, gioitinh, email, taikhoan, matkhau, vaitro)
+	   values(@hoten, @diachi, @gioitinh, @email, @taikhoan, @matkhau, @vaitro);
     END;
 GO
 
@@ -348,14 +349,15 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE PROCEDURE [dbo].[sp_quantri_update]
+alter PROCEDURE [dbo].[sp_quantri_update]
 (@id int,
 @hoten nvarchar(150),
 @diachi nvarchar(250),
 @gioitinh nvarchar(30),
 @email nvarchar(100),
 @taikhoan nvarchar(100),
-@matkhau nvarchar(100)
+@matkhau nvarchar(100),
+@vaitro nvarchar(100)
 )
 AS
     BEGIN
@@ -365,7 +367,8 @@ AS
 				gioitinh= @gioitinh,
 				email= @email,
 				taikhoan = @taikhoan,
-				matkhau = @matkhau           
+				matkhau = @matkhau,
+				vaitro = @vaitro
 				where ID = @ID;
         SELECT '';
     END;
@@ -1126,26 +1129,6 @@ AS
     END;
 GO
 
-
-USE [BTL_PTPMHDV_NguyenThuyHien]
-GO
-
-/****** Object:  StoredProcedure [dbo].[sp_khach_get_by_id]    Script Date: 10/25/2023 10:30:56 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-Create procedure [dbo].[sp_khach_get_by_id] @id int
-AS
-    BEGIN
-      SELECT  *
-      FROM KhachHang
-      where id= @id;
-    END;
-GO
-
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
@@ -1199,38 +1182,16 @@ GO
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
-/****** Object:  StoredProcedure [dbo].[sp_khach_delete]    Script Date: 10/25/2023 10:31:40 PM ******/
+/****** Object:  StoredProcedure [dbo].[sp_khach_search_allproductbyname]    Script Date: 10/25/2023 10:31:53 PM ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-
-create PROCEDURE [dbo].[sp_khach_delete](
-@id int
-)
-AS
-    BEGIN
-       delete from KhachHang
-	   where ID = @id
-    END;
-GO
-
-USE [BTL_PTPMHDV_NguyenThuyHien]
-GO
-
-/****** Object:  StoredProcedure [dbo].[sp_khach_search]    Script Date: 10/25/2023 10:31:53 PM ******/
-SET ANSI_NULLS ON
-GO
-
-SET QUOTED_IDENTIFIER ON
-GO
-
-create PROCEDURE [dbo].[sp_khach_search] (@page_index  INT, 
+create PROCEDURE [dbo].[sp_khach_search_allproductbyname] (@page_index  INT, 
                                        @page_size   INT,
-									   @tenkh Nvarchar(150),
-									   @diachi Nvarchar(250)
+									   @tensp nvarchar(250)
 									   )
 AS
     BEGIN
@@ -1239,17 +1200,14 @@ AS
             BEGIN
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
-                              ORDER BY TenKH ASC)) AS RowNumber, 
-                              k.ID,
-							  k.tenkh,
-							  k.diachi,
-							  k.email,
-							  k.taikhoan,
-							  k.matkhau
+                              ORDER BY TenSP ASC)) AS RowNumber, 
+							  k.TenSP,
+							  k.GiaSP,
+							  k.TinhTrang,
+							  k.AnhSP
                         INTO #Results1
-                        FROM KhachHang AS k
-					    WHERE  (@tenkh = '' Or k.tenkh like N'%'+@tenkh+'%') and						
-						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        FROM SanPham AS k
+					    WHERE  (@tensp = '' Or k.TenSP like N'%'+ @tensp+ '%');                   
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results1;
                         SELECT *, 
@@ -1263,17 +1221,78 @@ AS
             BEGIN
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
-                              ORDER BY TenKH ASC)) AS RowNumber, 
-							  k.ID,
-							  k.tenkh,
-							  k.diachi,
-							  k.email,
-							  k.taikhoan,
-							  k.matkhau
+                             ORDER BY TenSP ASC)) AS RowNumber, 
+							  k.TenSP,
+							  k.GiaSP,
+							  k.TinhTrang,
+							  k.AnhSP
                         INTO #Results2
-                        FROM KhachHang AS k
-					    WHERE  (@tenkh = '' Or k.tenkh like N'%'+@tenkh+'%') and						
-						(@diachi = '' Or k.diachi like N'%'+@diachi+'%');                   
+                        FROM SanPham AS k
+					    WHERE  (@tensp = '' Or k.TenSP like N'%'+@tensp+'%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results2;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results2;                        
+                        DROP TABLE #Results1; 
+        END;
+    END;
+GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
+/****** Object:  StoredProcedure [dbo].[sp_khach_search_loaisp]    Script Date: 11/16/2023 11:05:27 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_khach_search_loaisp] (@page_index  INT, 
+                                       @page_size   INT,
+									   @tenloaisp nvarchar(250)
+									   )
+AS
+    BEGIN
+        DECLARE @RecordCount BIGINT;
+        IF(@page_size <> 0)
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                              ORDER BY TenLoaiSP ASC)) AS RowNumber, 
+							  k.TenLoaiSP,
+							  k.NoiDung,
+							  s.TenSP,
+							  s.GiaSP,
+							  s.TinhTrang,
+							  s.AnhSP
+                        INTO #Results1
+                        FROM LoaiSanPham AS k full outer join SanPham AS s on k.IDLoaiSP = s.IDLoaiSP
+					    WHERE  (@tenloaisp = '' Or k.TenLoaiSP like N'%'+ @tenloaisp+ '%');                   
+                        SELECT @RecordCount = COUNT(*)
+                        FROM #Results1;
+                        SELECT *, 
+                               @RecordCount AS RecordCount
+                        FROM #Results1
+                        WHERE ROWNUMBER BETWEEN(@page_index - 1) * @page_size + 1 AND(((@page_index - 1) * @page_size + 1) + @page_size) - 1
+                              OR @page_index = -1;
+                        DROP TABLE #Results1; 
+            END;
+            ELSE
+            BEGIN
+						SET NOCOUNT ON;
+                        SELECT(ROW_NUMBER() OVER(
+                             ORDER BY TenLoaiSP ASC)) AS RowNumber, 
+							  k.TenLoaiSP,
+							  k.NoiDung,
+							  s.TenSP,
+							  s.GiaSP,
+							  s.TinhTrang,
+							  s.AnhSP
+                        INTO #Results2
+                        FROM LoaiSanPham AS k full outer join SanPham AS s on k.IDLoaiSP = s.IDLoaiSP
+					    WHERE  (@tenloaisp = '' Or k.TenLoaiSP like N'%'+@tenloaisp+'%');                   
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results2;
                         SELECT *, 
