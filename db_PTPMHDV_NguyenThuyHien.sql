@@ -395,6 +395,22 @@ GO
 
 exec [dbo].[sp_quantri_get_by_id] 1
 
+/****** Object:  StoredProcedure [dbo].[sp_quantri_login]    Script Date: 11/17/2023 1:47:37 PM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[sp_quantri_login](@taikhoan nvarchar(100), @matkhau nvarchar(100))
+AS
+    BEGIN
+      SELECT  *
+      FROM QuanTri
+      where taikhoan = @taikhoan and matkhau = @matkhau;
+    END;
+GO
+
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
@@ -787,45 +803,25 @@ GO
 
 alter PROCEDURE [dbo].[sp_sanpham_search] (@page_index  INT, 
                                        @page_size   INT,
-									   @tenSP Nvarchar(250),
-									   @IDSP int
+									   @tensp Nvarchar(250)								  
 									   )
 AS
     BEGIN
-		DECLARE @list_json_chitietsanpham NVARCHAR(MAX)
-		SELECT @list_json_chitietsanpham = (
-								SELECT
-									c.IDCTSP,
-									c.IDSP,
-									c.MoTa,
-									c.Soluong,
-									c.AnhCTSP
-								FROM ChiTietSanPham AS c
-								WHERE c.IDSP = @IDSP
-								FOR JSON AUTO
-							)
         DECLARE @RecordCount BIGINT;
         IF(@page_size <> 0)
             BEGIN
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
-                              ORDER BY TenSP ASC)) AS RowNumber, 
-                              k.IDSP,
+                              ORDER BY tensp ASC)) AS RowNumber, 
 							  k.IDLoaiSP,
+                              k.IDSP,
 							  k.TenSP,
 							  k.GiaSP,
-							  k.TinhTrang,
 							  k.AnhSP,
-							  c.IDCTSP,
-							  c.SoLuong,
-							  c.MoTa,
-							  c.AnhCTSP,
-							  @list_json_chitietsanpham as list_json_chitietsanpham
+							  k.TinhTrang
                         INTO #Results1
                         FROM SanPham AS k
-						full outer join ChiTietSanPham c on c.IDSP = k.IDSP
-					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%')
-						and k.IDSP = @IDSP;                   
+					    WHERE  (@tensp = '' Or k.TenSP like N'%'+@tensp+'%');                   
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results1;
                         SELECT *, 
@@ -839,23 +835,16 @@ AS
             BEGIN
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
-                              ORDER BY TenSP ASC)) AS RowNumber, 
+                              ORDER BY tensp ASC)) AS RowNumber, 
+                              k.IDLoaiSP,
                               k.IDSP,
-							  k.IDLoaiSP,
 							  k.TenSP,
 							  k.GiaSP,
-							  k.TinhTrang,
 							  k.AnhSP,
-							  c.IDCTSP,
-							  c.SoLuong,
-							  c.MoTa,
-							  c.AnhCTSP,
-							  @list_json_chitietsanpham as list_json_chitietsanpham
+							  k.TinhTrang
                         INTO #Results2
                         FROM SanPham AS k
-						full outer join ChiTietSanPham c on c.IDSP = k.IDSP
-					    WHERE  (@tenSP = '' Or k.TenSP like N'%'+@tenSP+'%')
-												and k.IDSP = @IDSP;                               
+					    WHERE (@tensp = '' Or k.TenSP like N'%'+@tensp+'%');                                  
                         SELECT @RecordCount = COUNT(*)
                         FROM #Results2;
                         SELECT *, 
@@ -1321,4 +1310,8 @@ AS
       where taikhoan = @taikhoan and matkhau = @matkhau;
     END;
 GO
+
+USE [BTL_PTPMHDV_NguyenThuyHien]
+GO
+
 
