@@ -813,8 +813,8 @@ AS
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
                               ORDER BY tensp ASC)) AS RowNumber, 
-							  k.IDLoaiSP,
-                              k.IDSP,
+							  k.IDSP,
+							  k.IDLoaiSP,                         
 							  k.TenSP,
 							  k.GiaSP,
 							  k.AnhSP,
@@ -836,8 +836,8 @@ AS
 						SET NOCOUNT ON;
                         SELECT(ROW_NUMBER() OVER(
                               ORDER BY tensp ASC)) AS RowNumber, 
-                              k.IDLoaiSP,
-                              k.IDSP,
+							  k.IDSP,
+                              k.IDLoaiSP,              
 							  k.TenSP,
 							  k.GiaSP,
 							  k.AnhSP,
@@ -1314,4 +1314,20 @@ GO
 USE [BTL_PTPMHDV_NguyenThuyHien]
 GO
 
+/****** Object:  StoredProcedure [dbo].[sp_getallloaisanpham]    Script Date: 11/19/2023 8:58:01 PM ******/
+SET ANSI_NULLS ON
+GO
 
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [dbo].[sp_getallloaisanpham]
+AS
+    BEGIN
+      SELECT IDLoaiSP FROM LoaiSanPham
+    END;
+GO
+
+
+exec [dbo].[sp_getallloaisanpham]
