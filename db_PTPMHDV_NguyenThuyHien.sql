@@ -222,21 +222,17 @@ GO
 SET ANSI_NULLS ON
 GO
 
-SET QUOTED_IDENTIFIER ON
-GO
-
 CREATE TABLE [dbo].[ChiTietSanPham](
 	[IDCTSP] [int] IDENTITY(1,1) NOT NULL,
 	[IDSP] [int] NOT NULL,
 	[SoLuong] [int] NULL,
-	[TongGia] [decimal](18, 0) NULL,
 	[AnhCTSP] [nvarchar](350) NULL,
-	[MoTa] [nvarchar](350) NULL,
+	[MoTa] [nvarchar](max) NULL,
  CONSTRAINT [PK_ChiTietSanPham] PRIMARY KEY CLUSTERED 
 (
 	[IDCTSP] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
-) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
 ALTER TABLE [dbo].[ChiTietSanPham]  WITH CHECK ADD  CONSTRAINT [FK_ChiTietSanPham_SanPham] FOREIGN KEY([IDSP])
@@ -1332,3 +1328,9 @@ GO
 
 exec [dbo].[sp_getallloaisanpham]
 
+CREATE PROCEDURE [dbo].[sp_getallsanpham]
+AS
+    BEGIN
+      SELECT * FROM SanPham
+    END;
+GO
